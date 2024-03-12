@@ -1,0 +1,63 @@
+http://id.loc.gov/resources/instances/22181412 (bf:Instance)
+    issuance: http://id.loc.gov/vocabulary/issuance/mono
+    provisionActivity
+        ProvisionActivity
+            type: http://id.loc.gov/ontologies/bibframe/Publication
+            date: 2021
+            place: http://id.loc.gov/vocabulary/countries/nyu
+            simplePlace: New York
+            simpleAgent: G. P. Putnam's Sons
+            simpleDate: [2021]
+    publicationStatement: New York: G. P. Putnam's Sons; [2021]
+    identifiedBy
+        Lccn
+            value:   2021034302
+    identifiedBy
+        Isbn
+            value: 9780593419649
+            qualifier: hardcover
+    identifiedBy
+        Isbn
+            value: 9780593422458
+            qualifier: trade paperback
+    identifiedBy
+        Isbn
+            value: 9780593419656
+            status: http://id.loc.gov/vocabulary/mstatus/cancinv
+            qualifier: ebook
+    responsibilityStatement: Dirk Cussler
+    title
+        Title
+            mainTitle: Clive Cussler's the devil's sea
+            subtitle: a Dirk Pitt novel
+    extent
+        Extent
+            label: ix, 416 pages
+    dimensions: 24 cm.
+    media: http://id.loc.gov/vocabulary/mediaTypes/n
+    carrier: http://id.loc.gov/vocabulary/carriers/nc
+    isPartOf: http://id.loc.gov/resources/instances
+    instanceOf: http://id.loc.gov/resources/works/22181412
+    adminMetadata
+        AdminMetadata
+            generationProcess
+                GenerationProcess
+                    label: DLC marc2bibframe2 v2.5.0
+                    generationDate: 2024-02-18T22:36:13.734651-05:00
+            status: http://id.loc.gov/vocabulary/mstatus/c
+            encodingLevel: http://id.loc.gov/vocabulary/menclvl/f
+            descriptionConventions: http://id.loc.gov/vocabulary/descriptionConventions/isbd
+            identifiedBy
+                Local
+                    value: 22181412
+                    assigner: http://id.loc.gov/vocabulary/organizations/dlc
+            changeDate: 2023-06-02T15:26:52
+            creationDate: 2021-08-18
+            d906: =906     $a 7 $b cbc $c orignew $d 1 $e ecip $f 20 $g y-gencatlg
+            d925: =925  0  $a acquire $b 1 shelf copy $x policy default
+            d955: =955     $b xk04 2021-08-18 (TW Situational) $i xk04 2021-08-18 (TW Situational) to CIP $a xn18 2022-02-24 1 copy rec'd., to CIP ver. $f xk25 2022-03-22 to CMD
+            assigner: http://id.loc.gov/vocabulary/organizations/dlc
+            descriptionLanguage: http://id.loc.gov/vocabulary/languages/eng
+            descriptionModifier: http://id.loc.gov/vocabulary/organizations/dlc
+            descriptionConventions: http://id.loc.gov/vocabulary/descriptionConventions/rda
+            descriptionAuthentication: http://id.loc.gov/vocabulary/marcauthen/pcc
