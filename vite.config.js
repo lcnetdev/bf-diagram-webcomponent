@@ -6,7 +6,7 @@ export default defineConfig({
     build: {
       rollupOptions: {
         output: {
-          entryFileNames: `assets/[name].js`,
+          entryFileNames: `assets/bf-diagram.js`,
           chunkFileNames: `assets/[name].js`,
           assetFileNames: `assets/[name].[ext]`
         }
