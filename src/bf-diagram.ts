@@ -43,6 +43,7 @@ export class BfDiagram extends LitElement {
   @property({ type: String }) instances = ""
   @property({ type: String }) works = ""
   @property({ type: String }) hubs = ""
+  @property({ type: String }) ignore = ""
 
   @property({ type: Boolean }) fixinstanceof = false
 
@@ -52,6 +53,7 @@ export class BfDiagram extends LitElement {
   @state() resources: Resources = {instances:[],works:[],hubs:[]}
 
   @state() finalDereferenceTimeout: null| number = null
+  @state() processTxtCurrentParentPredicate: string = ''
 
   
 
@@ -140,8 +142,6 @@ export class BfDiagram extends LitElement {
               let instanceLineContainer = this.shadowRoot.querySelector<HTMLElement>(`#instance-line-${i.id}-svg`)
               if (instanceLineContainer){
                 // hide lines if no parent
-                console.log(i)
-                console.log()
                 if (this.resources.works.map((ww)=>{ return ww.id}).indexOf(i.parents[0]) == -1){
                   instanceLineContainer.style.display='none';
                 }
@@ -392,7 +392,7 @@ _dereference(id: string, type: string){
     window.clearTimeout(this.finalDereferenceTimeout)
   }
   this.finalDereferenceTimeout = window.setTimeout(()=>{
-    console.log("REQUESTING UPDATe")
+    
     this.requestUpdate()
   },1000)
   
@@ -579,19 +579,26 @@ _processTxt(txt: string[]): ResourcesLine[]{
     if (indent){
       parsedLine.indent = indent[1].length/2
     }
+    if (parsedLine.indent < 2){ this.processTxtCurrentParentPredicate = ''}
 
+
+    
     let objectPropertyMatch = line.match(/^\s+([a-z][a-zA-Z]+)\:\s(https*:\/\/.*$)/)
     let literalPropertyMatch = line.match(/^\s+([a-z][a-zA-Z0-9\-]+)\:\s(?!http)(.*)$/)
     let blankNodePredicateMatch = line.match(/^\s+([a-z]+[a-zA-Z]+)$/)
     let blankNodeClassMatch = line.match(/^\s+([A-Z]+[a-zA-Z]+)$/)
 
 
-    if (line.trim() == ''){ continue }
 
     if (objectPropertyMatch){
       let objectProperty = objectPropertyMatch[1]
       let objectPropertyValueUri = objectPropertyMatch[2]   
       let objectPropertyValueUriDisplay = objectPropertyValueUri   
+      if (parsedLine.indent==2){this.processTxtCurrentParentPredicate = objectProperty}
+      if (this.ignore.split(",").indexOf(this.processTxtCurrentParentPredicate) >-1){
+        continue
+      }
+      
       this._dereference(objectProperty,'predicate')
       parsedLine.type = 'predicate'
 
@@ -646,17 +653,33 @@ _processTxt(txt: string[]): ResourcesLine[]{
     }else if (literalPropertyMatch){
       let literalProperty = literalPropertyMatch[1]
       let literalPropertyValue = literalPropertyMatch[2]
+      if (parsedLine.indent==2){this.processTxtCurrentParentPredicate = literalProperty}
+
+      if (this.ignore.split(",").indexOf(this.processTxtCurrentParentPredicate) >-1){
+        continue
+      }
+      
+
       this._dereference(literalProperty,'predicate')
       parsedLine.html = html`<div class="statement space-mono-regular indent-${parsedLine.indent}"><a @mouseover="${this._mouseOverToolTip}" target="_blank" data-derefid="${`bf-diagram-predicate-${literalProperty}`}" class="tool">${literalProperty}</a>: ${literalPropertyValue}</div>`
 
 
     }else if (blankNodePredicateMatch){
       let blankNodePredicate = blankNodePredicateMatch[1]
+      if (parsedLine.indent==2){this.processTxtCurrentParentPredicate = blankNodePredicate}
+
+      if (this.ignore.split(",").indexOf(this.processTxtCurrentParentPredicate) >-1){
+        continue
+      }   
+      
       this._dereference(blankNodePredicate,'predicate')
       parsedLine.html = html`<div class="statement space-mono-regular indent-${parsedLine.indent}"><a @mouseover="${this._mouseOverToolTip}" target="_blank" data-derefid="${`bf-diagram-predicate-${blankNodePredicate}`}" class="tool">${blankNodePredicate}</a></div>`
     }else if (blankNodeClassMatch){
       let blankNodeClass = blankNodeClassMatch[1]
-      
+      if (this.ignore.split(",").indexOf(this.processTxtCurrentParentPredicate) >-1){
+        continue
+      }
+
       this._dereference(blankNodeClass,'class')
       parsedLine.html = html`<div class="statement space-mono-regular indent-${parsedLine.indent}"><a @mouseover="${this._mouseOverToolTip}" target="_blank" data-derefid="${`bf-diagram-class-${blankNodeClass}`}" class="tool">${blankNodeClass}</a></div>`
     }else if (line.indexOf(' (bf:Instance)') > -1 || line.indexOf(' (bf:Work)') > -1 || line.indexOf(' (bf:Hub)') > -1){
@@ -669,6 +692,8 @@ _processTxt(txt: string[]): ResourcesLine[]{
       
     }
 
+    if (line.trim() == ''){ continue }
+    
 
     
     output.push(parsedLine)
@@ -851,7 +876,7 @@ _buildRelantionships(data: aResources, textAry: string[]){
 
 
   render() {
-    console.log("RENDERING")
+    
     // const itemTemplates = [];
     // if (this.properties){
     //   for (const i of this.properties.split(",")) {
@@ -867,6 +892,8 @@ _buildRelantionships(data: aResources, textAry: string[]){
     let allInstancesLines = []
 
     let counter = 0
+
+  
     
     for (let instance of this.resources.instances){
       

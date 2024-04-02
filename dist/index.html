@@ -4,35 +4,55 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title></title>
-    <script type="module" crossorigin src="/assets/bf-diagram.js.js"></script>
+    <!-- <script type="module" src="https://lcnetdev.github.io/bf-diagram-webcomponent/dist/assets/bf-diagram.js"></script> -->
+
+    <script type="module" crossorigin src="/assets/bf-diagram.js"></script>
   </head>
   <body>
+    <style>
+    label{
+      margin-right: 0.5em;
+    }
+    </style>
     <div style="padding: 1em;">
     <label for="instances">Instance IDs, separated by comma:</label><input id="instances" value="22181412,22183166" type="text" style="width: 250px;" placeholder="instance ids separated with comma"><br>
     <label for="work">Work ID:</label><input id="work" value="22181412" type="text" style="width: 150px;" placeholder="work id"><br>
     <label for="hub">Hub ID:</label><input id="hub" type="text" style="width: 150px;" placeholder="Hub IDs"><br>
+    <label for="ignore">Ignore Properties, comma separated:</label><input id="ignore" type="text" style="width: 150px;" placeholder="Ignore properties comma separated"><br>
+
     <input id="fix" type="checkbox" checked><label for="fix" >force all instances to point to work</label><br>
     <button id="update">update</button>
   </div>
-    <p id="code-text" style="display: none;">Use this code to add diagram to site:</p>
+    <p id="code-text" style="display: none;">Use this code to add diagram:</p>
     <pre><code id="code" style="background-color: whitesmoke;"></code></pre>
+
+
+    <bf-diagram instances="22181412,22183166" works="22181412" ignore="adminMetadata" fixinstanceof>
+
     <script>
 
-      document.getElementById('update').addEventListener('click',()=>{
-
-        document.querySelector('bf-diagram').remove()
+      function buildDisplay(){
 
         let instances = document.querySelector('#instances').value
         let work = document.querySelector('#work').value
         let hub = document.querySelector('#hub').value
+        let ignore = document.querySelector('#ignore').value
+
         let fix = document.querySelector('#fix').checked
+        
+        document.querySelector('bf-diagram').remove()
+
 
         let el = document.createElement('bf-diagram')
         el.setAttribute('instances',instances)
-        el.setAttribute('works',work)
+        el.setAttribute('works',work)        
         if (hub.trim().length>0){
           el.setAttribute('hubs',hub)
         }
+        if (ignore.trim().length>0){
+          el.setAttribute('ignore',ignore)
+        }
+
         if (fix){
           el.setAttribute('fixinstanceof',true)
         }
@@ -52,6 +72,10 @@
         if (hub.length > 0){
           hub = ` hubs="${hub}" `
         }
+        if (ignore.length > 0){
+          ignore = ` ignore="${ignore}" `
+        }
+        
         if (fix){
           fix = `fixinstanceof`
 
@@ -62,21 +86,30 @@
 
         let code = `
 
-        &lt;bf-diagram ${instances} ${work} ${hub} ${fix}/&gt;`
+        &lt;bf-diagram ${instances} ${work} ${hub} ${ignore} ${fix}/&gt;`
         code = code.replace(/\s+/g,' ')
         document.getElementById('code').innerHTML = code
         document.getElementById('code').style.padding="1em"
         document.getElementById('code-text').style.display='block'
 
 
+
+      }
+
+
+      document.getElementById('update').addEventListener('click',()=>{
+
+        buildDisplay()
+
       })
 
+
+      buildDisplay()
 
     </script>
 
 
-    
-      <bf-diagram instances="22181412,22183166" works="22181412" fixinstanceof>
+
 
 
       
