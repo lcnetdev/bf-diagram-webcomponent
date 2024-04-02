@@ -375,8 +375,9 @@ _returnDereferenceInfo(id: string | undefined, key:string) {
     return ''
   }
   id = id.replace("http://","https://")
-
   let x = window.sessionStorage.getItem(id)
+  console.log("id:",id, "==",x)
+
   if (x === 'pending'){return ''}
   if (x){
     return JSON.parse(x)[key]
@@ -391,7 +392,7 @@ _returnDereferenceInfo(id: string | undefined, key:string) {
 _dereference(id: string, type: string){
   
   id = id.replace("http://","https://")
-
+  
   if (this.finalDereferenceTimeout !== null){
     window.clearTimeout(this.finalDereferenceTimeout)
   }
