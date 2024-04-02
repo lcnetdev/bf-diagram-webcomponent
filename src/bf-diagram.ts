@@ -374,6 +374,8 @@ _returnDereferenceInfo(id: string | undefined, key:string) {
   if (!id){
     return ''
   }
+  id = id.replace("http://","https://")
+
   let x = window.sessionStorage.getItem(id)
   if (x === 'pending'){return ''}
   if (x){
