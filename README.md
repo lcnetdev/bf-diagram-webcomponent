@@ -35,4 +35,4 @@ To build:
 ```
 npm run build
 ```
-The files will be 
+The files will be `dist/assets/bf-diagram.js`
