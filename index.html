@@ -8,10 +8,76 @@
     <script type="module" src="/src/bf-diagram.ts"></script>
   </head>
   <body>
+    <div style="padding: 1em;">
+    <label for="instances">Instance IDs, separated by comma:</label><input id="instances" value="22181412,22183166" type="text" style="width: 250px;" placeholder="instance ids separated with comma"><br>
+    <label for="work">Work ID:</label><input id="work" value="22181412" type="text" style="width: 150px;" placeholder="work id"><br>
+    <label for="hub">Hub ID:</label><input id="hub" type="text" style="width: 150px;" placeholder="Hub IDs"><br>
+    <input id="fix" type="checkbox" checked><label for="fix" >force all instances to point to work</label><br>
+    <button id="update">update</button>
+  </div>
+    <p id="code-text" style="display: none;">Use this code to add diagram to site:</p>
+    <pre><code id="code" style="background-color: whitesmoke;"></code></pre>
+    <script>
 
-      
+      document.getElementById('update').addEventListener('click',()=>{
 
-      <bf-diagram>
+        document.querySelector('bf-diagram').remove()
+
+        let instances = document.querySelector('#instances').value
+        let work = document.querySelector('#work').value
+        let hub = document.querySelector('#hub').value
+        let fix = document.querySelector('#fix').checked
+
+        let el = document.createElement('bf-diagram')
+        el.setAttribute('instances',instances)
+        el.setAttribute('works',work)
+        if (hub.trim().length>0){
+          el.setAttribute('hubs',hub)
+        }
+        if (fix){
+          el.setAttribute('fixinstanceof',true)
+        }
+
+
+        document.body.appendChild(el)
+
+
+        if (instances.length > 0){
+          instances = ` instances="${instances}" `
+        }else{
+          instances = ''
+        }
+        if (work.length > 0){
+          work = ` works="${work}" `
+        }
+        if (hub.length > 0){
+          hub = ` hubs="${hub}" `
+        }
+        if (fix){
+          fix = `fixinstanceof`
+
+        }else{
+          fix=''
+        }
+        // &lt;script type="module" crossorigin src="/assets/index-zyR9tVL3.js"&gt;&lt;/script&gt;\n
+
+        let code = `
+
+        &lt;bf-diagram ${instances} ${work} ${hub} ${fix}/&gt;`
+        code = code.replace(/\s+/g,' ')
+        document.getElementById('code').innerHTML = code
+        document.getElementById('code').style.padding="1em"
+        document.getElementById('code-text').style.display='block'
+
+
+      })
+
+
+    </script>
+
+
+    
+      <bf-diagram instances="22181412,22183166" works="22181412" fixinstanceof>
 
 
       

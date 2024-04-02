@@ -2,8 +2,10 @@ import { LitElement, css, html } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 
 
-const BASE_INSTANCE_URL = "/instances/"
-const BASE_WORK_URL = "/works/"
+const BASE_INSTANCE_URL = "https://id.loc.gov/resources/instances/"
+const BASE_WORK_URL = "https://id.loc.gov/resources/works/"
+const BASE_HUB_URL = "https://id.loc.gov/resources/hubs/"
+
 const IGNORE_COMMON_PREDICATES = ['type','date','value','qualifier','label']
 
 
@@ -14,12 +16,15 @@ const IGNORE_COMMON_PREDICATES = ['type','date','value','qualifier','label']
 interface aResources {
   id: string,
   parts: ResourcesLine[],
-  type: string  
+  type: string,
+  parents:string[],
+  children:string[]  
 }
 
 interface Resources {
   instances: aResources[],
-  works: aResources[]
+  works: aResources[],
+  hubs: aResources[]
 }
 
 interface ResourcesLine {
@@ -37,13 +42,16 @@ export class BfDiagram extends LitElement {
   // optional (1 of the 3 req) the text heading to lookup the LCCN to lookup the Qid
   @property({ type: String }) instances = ""
   @property({ type: String }) works = ""
-  
+  @property({ type: String }) hubs = ""
+
+  @property({ type: Boolean }) fixinstanceof = false
+
 
   @state() stateval: string = ""
 
-  @state() resources: Resources = {instances:[],works:[]}
+  @state() resources: Resources = {instances:[],works:[],hubs:[]}
 
-  
+  @state() finalDereferenceTimeout: null| number = null
 
   
 
@@ -51,9 +59,9 @@ export class BfDiagram extends LitElement {
     super();
   
     // we are setting the default values, will get overwritten by the attribute properties if provided
-    this.instances = "22181412,22183166"
-    this.works = "22181412"
-
+    // this.instances = "22181412,22183166"
+    // this.works = "22181412"
+    // this.hubs = 'b2581ff4-e0fe-9279-3762-96f404ceb5dd'
   }
 
   connectedCallback() {
@@ -73,7 +81,7 @@ export class BfDiagram extends LitElement {
           let container = this.shadowRoot.querySelector('#bf-diagram-container')
           if (container){
             
-            console.log(container.clientHeight)
+            
 
             let allInstanceDivs = this.shadowRoot.querySelectorAll('.instance')
             let offSetTop = 0
@@ -91,7 +99,9 @@ export class BfDiagram extends LitElement {
                 height:parseFloat(iStyle.height),
                 middle: parseFloat(iStyle.height)/2,
                 id:i,
-                runningTop: runningTop               
+                runningTop: runningTop,
+                parents: this.resources.instances[i].parents,
+                iconTop:''               
               })
 
               runningTop = runningTop + parseFloat(iStyle.height)
@@ -104,21 +114,179 @@ export class BfDiagram extends LitElement {
                 svg.style.display='block'
                 svg.style.top = i.runningTop + (i.middle / 2) + 'px'
               }
-
-
+              i.iconTop = i.runningTop + (i.middle / 2) + 'px'
             }
 
             let firstWork = this.shadowRoot.querySelector<HTMLElement>(`.work:first-of-type `)
 
             if(firstWork){
-              firstWork.style.marginTop = container.clientHeight / 2 + 'px'
+              firstWork.style.marginTop = container.clientHeight / 4 + 'px'
               
             }
 
+            let topInstanceX = ''
+            let bottomInstanceX = ''
+            // now draw the lines
+            for (let [idx, i] of instancesData.entries()){
 
-            console.log(offSetTop)
-            console.log(instancesData )
+              let instanceBelowWork = false
+              let work = this.shadowRoot.querySelector<HTMLElement>(`[data-resource="work-${i.parents[0]}-icon"]`)
+              
+              if (work && work.parentElement && work.parentElement.offsetTop && parseFloat(i.iconTop) >= work.parentElement.offsetTop){
+                instanceBelowWork = true
 
+              }
+              
+              let instanceLineContainer = this.shadowRoot.querySelector<HTMLElement>(`#instance-line-${i.id}-svg`)
+              if (instanceLineContainer){
+                // hide lines if no parent
+                console.log(i)
+                console.log()
+                if (this.resources.works.map((ww)=>{ return ww.id}).indexOf(i.parents[0]) == -1){
+                  instanceLineContainer.style.display='none';
+                }
+              }
+
+              let instanceIcon = this.shadowRoot.querySelector<HTMLElement>(`#instance-${i.id}-svg`)
+              
+
+              if (i.parents[0] && instanceLineContainer){
+                
+                // let parent = this.shadowRoot.querySelector<HTMLElement>(`[data-resource="work-${i.parents[0]}-icon"]`)
+                
+
+                
+                
+                
+                let instanceHolderWidth = this.shadowRoot.querySelector(".instance-icons")
+
+                if (instanceBelowWork){
+
+                  instanceLineContainer.style.top = work?.parentElement?.offsetTop + 'px'
+
+
+                  
+
+
+
+                  if (work && work.parentElement && instanceIcon && instanceHolderWidth){
+
+
+
+                    instanceLineContainer.style.height = parseFloat(i.iconTop) - work.parentElement.offsetTop + instanceIcon?.clientHeight + 'px'
+                    // instanceLineContainer.style.opacity = '0.25'
+                    instanceLineContainer.style.width = instanceHolderWidth.clientWidth + (work.parentElement.offsetWidth / 2) +'px'
+                    instanceLineContainer.style.left = work.parentElement.offsetWidth - (work.parentElement.offsetWidth / 2) + 'px'
+
+                    // console.log("work.parentElement.offsetWidth",work.parentElement.offsetWidth)
+                    if (bottomInstanceX === ''){
+                      bottomInstanceX = parseFloat(instanceLineContainer.style.width) - instanceIcon.clientWidth - (Math.floor(Math.random() * (250 - 100 + 1)) + 100)   + ''
+                    }
+
+                    let line1 = instanceLineContainer.querySelector('.line-part-1')
+                    if (line1){
+                      line1.setAttribute('y1', instanceLineContainer.clientHeight - (instanceIcon.clientHeight /2) +'')
+                      line1.setAttribute('y2', instanceLineContainer.clientHeight - (instanceIcon.clientHeight /2) +'')
+                      line1.setAttribute('x1', parseFloat(instanceLineContainer.style.width) - instanceIcon.clientWidth + '') 
+                      line1.setAttribute('x2', bottomInstanceX) 
+                    }
+                    let line2 = instanceLineContainer.querySelector('.line-part-2')
+                    if (line2 && line1){                      
+                      line2.setAttribute('y1', instanceIcon.clientHeight / 2 - 3 +'')
+                      line2.setAttribute('y2', (instanceIcon.clientHeight / 2) + parseFloat(instanceLineContainer.style.height) - instanceIcon.clientHeight + 4 + '')
+                      line2.setAttribute('x1',  line1.getAttribute('x2') + '' ) 
+                      line2.setAttribute('x2', line1.getAttribute('x2') + '' ) 
+                    }
+                    let line3 = instanceLineContainer.querySelector<HTMLElement>('.line-part-3')
+                    if (line3){
+                      line3.style.display = 'none'
+                    }
+
+                    
+                  }
+
+
+                }else{
+                  // its above the work icon
+                  instanceLineContainer.style.top = i.iconTop
+
+
+
+                  if (work && work.parentElement && instanceIcon && instanceHolderWidth){
+                    instanceLineContainer.style.height = (work.parentElement.offsetTop - parseFloat(i.iconTop) + instanceIcon?.clientHeight) +'px'
+                    // instanceLineContainer.style.opacity = '0.25'
+                    instanceLineContainer.style.width = instanceHolderWidth.clientWidth + (work.parentElement.offsetWidth / 2) +'px'
+                    instanceLineContainer.style.left = work.parentElement.offsetWidth - (work.parentElement.offsetWidth / 2) + 'px'
+
+                    
+                      
+                    if (topInstanceX === ''){
+                      topInstanceX = parseFloat(instanceLineContainer.style.width) - instanceIcon.clientWidth - (Math.floor(Math.random() * (100 - 50 + 1)) + 50)   + ''
+                    }
+
+                    let line1 = instanceLineContainer.querySelector('.line-part-1')
+                    if (line1){
+                      line1.setAttribute('y1', instanceIcon.clientHeight / 2 +'')
+                      line1.setAttribute('y2', instanceIcon.clientHeight / 2 +'')
+                      line1.setAttribute('x1', parseFloat(instanceLineContainer.style.width) - instanceIcon.clientWidth + '') 
+                      line1.setAttribute('x2', topInstanceX) 
+                    }
+                    let line2 = instanceLineContainer.querySelector('.line-part-2')
+                    if (line2 && line1){
+ 
+                      
+                      line2.setAttribute('y1', instanceIcon.clientHeight / 2 - 3 +'')
+                      line2.setAttribute('y2', (instanceIcon.clientHeight / 2) + parseFloat(instanceLineContainer.style.height) - instanceIcon.clientHeight + 4 + '')
+                      line2.setAttribute('x1',  line1.getAttribute('x2') + '' ) 
+                      line2.setAttribute('x2', line1.getAttribute('x2') + '' ) 
+                    }
+                   
+                    
+                    let line3 = instanceLineContainer.querySelector<HTMLElement>('.line-part-3')
+                    if (line3 && line2 ){
+
+                      line3.setAttribute('y1', (instanceIcon.clientHeight / 2) + parseFloat(instanceLineContainer.style.height) - instanceIcon.clientHeight + '')
+                      line3.setAttribute('y2', (instanceIcon.clientHeight / 2) + parseFloat(instanceLineContainer.style.height) - instanceIcon.clientHeight + '')
+                      line3.setAttribute('x1', line2.getAttribute('x2') + '' ) 
+                      line3.setAttribute('x2', 0 + (instanceIcon.clientWidth/2 + 20)  + '' ) 
+
+                    }
+
+                    if (idx == 0){
+                      // add the label for the first one
+                      let text = instanceLineContainer.querySelector<HTMLElement>('.bf-instance-of')
+                      if (text && line3){
+                        text.style.display="block"
+                        text.setAttribute('x', instanceLineContainer.clientWidth / 2  - 100 + '' )
+                        text.setAttribute('y', (instanceIcon.clientHeight / 2) + parseFloat(instanceLineContainer.style.height) - 10 - instanceIcon.clientHeight + '')
+
+                        
+                      }
+                      
+
+                    }
+
+
+
+                  }
+
+                }
+
+
+               
+                
+              }
+
+
+              //instnace-${instance.id}-icon
+
+
+            }
+
+
+
+
+            
           }
         }
       });
@@ -194,9 +362,7 @@ _extractLabelDescriptionFromXmlRDF(xmlStr: string, url: string){
     useDesc = results[0].innerHTML    
   }
   
-  console.log(url)
-  console.log({label: useLabel, desc: useDesc, url:url})
-
+  
   return {label: useLabel, desc: useDesc, url:url}
 
  
@@ -222,6 +388,13 @@ _returnDereferenceInfo(id: string | undefined, key:string) {
 
 _dereference(id: string, type: string){
   
+  if (this.finalDereferenceTimeout !== null){
+    window.clearTimeout(this.finalDereferenceTimeout)
+  }
+  this.finalDereferenceTimeout = window.setTimeout(()=>{
+    console.log("REQUESTING UPDATe")
+    this.requestUpdate()
+  },1000)
   
   // skip some common values
   if (type === 'predicate' && IGNORE_COMMON_PREDICATES.indexOf(id) > -1){
@@ -263,7 +436,7 @@ _dereference(id: string, type: string){
       }
       
     }).catch((error) => {
-      console.log(error)
+      console.error(error)
       fetch(bflcUri, {
         method: "GET"
       })
@@ -294,7 +467,7 @@ _dereference(id: string, type: string){
 
   }else if (type === 'vocabulary' || type === 'authorities' || type === 'agents'){
 
-    console.log("GETTING ",id + '.skos.rdf')
+    
     fetch(id + '.skos.rdf', {
       method: "GET"
     })
@@ -305,7 +478,7 @@ _dereference(id: string, type: string){
         let labelDesc = this._extractLabelDescriptionFromXmlRDF(xml, url)
         // labelDesc.desc = labelDesc.desc + " (vocab. resource)"
 
-        console.log(`bf-diagram-${type}-${id}`)
+        
         window.sessionStorage.setItem(`bf-diagram-${type}-${id}`, JSON.stringify(labelDesc))
         this.requestUpdate()
       }else{
@@ -389,6 +562,7 @@ _mouseOverToolTip(e: Event){
 
 _processTxt(txt: string[]): ResourcesLine[]{
 
+
   
   // let x = html`hello`
   // 
@@ -407,11 +581,12 @@ _processTxt(txt: string[]): ResourcesLine[]{
     }
 
     let objectPropertyMatch = line.match(/^\s+([a-z][a-zA-Z]+)\:\s(https*:\/\/.*$)/)
-    let literalPropertyMatch = line.match(/^\s+([a-z][a-zA-Z]+)\:\s(?!http)(.*)$/)
+    let literalPropertyMatch = line.match(/^\s+([a-z][a-zA-Z0-9\-]+)\:\s(?!http)(.*)$/)
     let blankNodePredicateMatch = line.match(/^\s+([a-z]+[a-zA-Z]+)$/)
     let blankNodeClassMatch = line.match(/^\s+([A-Z]+[a-zA-Z]+)$/)
 
-    
+
+    if (line.trim() == ''){ continue }
 
     if (objectPropertyMatch){
       let objectProperty = objectPropertyMatch[1]
@@ -456,9 +631,9 @@ _processTxt(txt: string[]): ResourcesLine[]{
         
         this._dereference(objectPropertyValueUri,'agents')
         parsedLine.type = 'agents'
-        console.log("BEFORE",objectPropertyValueUriDisplay)
+        
         objectPropertyValueUriDisplay = objectPropertyValueUriDisplay.replace('http://id.loc.gov/rwo/','').replace('/',':')
-        console.log("after",objectPropertyValueUriDisplay)
+        
       }
 
 
@@ -484,9 +659,14 @@ _processTxt(txt: string[]): ResourcesLine[]{
       
       this._dereference(blankNodeClass,'class')
       parsedLine.html = html`<div class="statement space-mono-regular indent-${parsedLine.indent}"><a @mouseover="${this._mouseOverToolTip}" target="_blank" data-derefid="${`bf-diagram-class-${blankNodeClass}`}" class="tool">${blankNodeClass}</a></div>`
+    }else if (line.indexOf(' (bf:Instance)') > -1 || line.indexOf(' (bf:Work)') > -1 || line.indexOf(' (bf:Hub)') > -1){
+      // http://id.loc.gov/resources/instances/22181412 (bf:Instance)
+      // we arleady know what the resource is
     }else{
 
-      console.log("NO MATCH",line)
+      
+
+      
     }
 
 
@@ -500,7 +680,50 @@ _processTxt(txt: string[]): ResourcesLine[]{
 
 }
 
+_buildRelantionships(data: aResources, textAry: string[]){
 
+
+  let parents: string[] = []
+  let children: string[] = []
+
+  for (let line of textAry){
+
+    if (data.type === 'instance'){
+      if (line.indexOf('instanceOf:') > -1){
+        let workId = line.split("/").pop()
+        // if we are collapsing all instances to point to the first work
+        if (this.fixinstanceof){
+          if (this.resources.works.length>0){
+            parents.push(this.resources.works[0].id)
+          }
+        }else{
+          if (workId){
+            parents.push(workId)
+          }
+        }
+      }
+    }else if (data.type === 'work'){
+      if (line.indexOf('hasInstance:') > -1){
+        let instanceId = line.split("/").pop()
+        // if we are collapsing all instances to point to the first work
+        if (instanceId){
+          children.push(instanceId)
+        }
+      }
+    }
+
+
+  }
+
+
+
+  return {
+    children:children,
+    parents:parents
+  }
+    
+
+}
 
 
 
@@ -511,19 +734,31 @@ _processTxt(txt: string[]): ResourcesLine[]{
     let allPromises = []
     let instanceOrder = []
     let workOrder = []
+    let hubOrder = []
 
 
     // build and resolve all the request for data in one async request at the same time
     for (let instaceId of this.instances.split(",")){
-      let instanceReq = fetch(`${BASE_INSTANCE_URL}${instaceId}.txt`)
+      if (instaceId.trim().length==0){ continue }
+
+      let instanceReq = fetch(`${BASE_INSTANCE_URL}${instaceId}.composed.txt`)
       instanceOrder.push(instaceId)
       allPromises.push(instanceReq)
     }
     for (let workId of this.works.split(",")){
-      let workReq = fetch(`${BASE_WORK_URL}${workId}.txt`)
+      if (workId.trim().length==0){ continue }
+
+      let workReq = fetch(`${BASE_WORK_URL}${workId}.composed.txt`)
       allPromises.push(workReq)
       workOrder.push(workId)
     }
+    for (let hubId of this.hubs.split(",")){
+      if (hubId.trim().length==0){ continue }
+      let hubReq = fetch(`${BASE_HUB_URL}${hubId}.composed.txt`)
+      allPromises.push(hubReq)
+      hubOrder.push(hubId)
+    }
+
 
     let allPromisesResults
     try{
@@ -543,31 +778,52 @@ _processTxt(txt: string[]): ResourcesLine[]{
     }
 
     // build the resource data obj now that we have everything
-    for (let i of instanceOrder){
-
+    for (let w of workOrder){
       for (let text of allText){
         let textAry = text.split("\n")
-        if (textAry[0].indexOf(i) > -1 && textAry[0].indexOf('bf:Instance') >-1){
+        if (textAry[0].indexOf(w) > -1 && textAry[0].indexOf('bf:Work') >-1){
+            let r: aResources = {id:w, type: 'work', parts: this._processTxt(textAry), parents: [],children:[] }       
+            r.children = this._buildRelantionships(r, textAry).children
 
-          let r: aResources = {id:i, type: 'dunno', parts: this._processTxt(textAry) }
-          this.resources.instances.push(r)
-          this.requestUpdate()
-
-          
-
-        }else if (textAry[0].indexOf(i) > -1 && textAry[0].indexOf('bf:Work') >-1){
-
-          let r: aResources = {id:i, type: 'dunno', parts: this._processTxt(textAry) }
-          this.resources.works.push(r)
-          this.requestUpdate()
-
-
-
-        }
-
+            this.resources.works.push(r)
+            this.requestUpdate()
+            break
+          }
       }
     }
+
+    for (let i of instanceOrder){
+      for (let text of allText){
+        let textAry = text.split("\n")
+        if (textAry[0].indexOf(i) > -1 && textAry[0].indexOf('bf:Instance') >-1){          
+          let r: aResources = {id:i, type: 'instance',  parts: this._processTxt(textAry), parents: [],children:[] }    
+          r.parents = this._buildRelantionships(r, textAry).parents
+          this.resources.instances.push(r)
+          this.requestUpdate()
+          break
+        }
+      }
+    }
+
+    for (let i of hubOrder){
+      for (let text of allText){
+        let textAry = text.split("\n")
+        if (textAry[0].indexOf(i) > -1 && textAry[0].indexOf('id.loc.gov/resources/hubs/') >-1){          
+          let r: aResources = {id:i, type: 'hub',  parts: this._processTxt(textAry), parents: [],children:[] }    
+
+          this.resources.hubs.push(r)
+          this.requestUpdate()
+          break
+        }
+      }
+    }
+
+
+
     
+
+    // else 
+
     
 
     // window.setInterval(()=>{
@@ -581,18 +837,21 @@ _processTxt(txt: string[]): ResourcesLine[]{
   //   e.preventDefault()
   //   return false
   // }
-  // _wikiThisDisplayClick(e: Event) {
-  //   e.preventDefault()
-  //   return false
+  // _instanceIconClick(e: Event) {
+    
+    
   // }
   
   
+
+  
+
   
 
 
 
   render() {
-
+    console.log("RENDERING")
     // const itemTemplates = [];
     // if (this.properties){
     //   for (const i of this.properties.split(",")) {
@@ -602,15 +861,78 @@ _processTxt(txt: string[]): ResourcesLine[]{
 
     let allInstances = []
     let allWorks = []
+    let allHubs = []
 
+    let allInstancesIcons = []
+    let allInstancesLines = []
+
+    let counter = 0
+    
     for (let instance of this.resources.instances){
+      
 
       let iHtml = []
       for (let line of instance.parts){
         iHtml.push(line.html)
       }
-      allInstances.push(html`<div class="instance">${iHtml}</div>`)
+      allInstances.push(html`<div class="instance">
+          
 
+
+        ${iHtml}
+      
+      
+      </div>`)
+
+
+      allInstancesLines.push(html`
+
+          <svg id="instance-line-${counter}-svg" class="instance-line-svg"  >
+            
+            <rect width="100%" height="100%" />
+            <defs>
+              <!-- <marker id="arrow-${counter}" markerWidth="4" fill="red" markerHeight="8" refX="4.7" refY="3" orient="auto" markerUnits="strokeWidth">
+                <path d="M0,0 L0,6 L9,3 z" />
+              </marker> -->
+              <marker
+                id="arrow-${counter}"
+                fill="#565656"
+                viewBox="0 0 15 15"
+                refX="5"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" />
+              </marker>
+
+            </defs>
+            <line class="line-part-1" x1="150" y1="150" x2="250" y2="150" stroke="#565656" stroke-width="8"  />
+            <line class="line-part-2" x1="150" y1="150" x2="250" y2="150" stroke="#565656" stroke-width="8"  />
+
+            <line class="line-part-3" x1="0" y1="0" x2="250" y2="50" stroke="#565656" stroke-width="8" marker-end="url(#arrow-${counter})" />
+            <text class="bf-instance-of" x="0" y="0" >bf:instanceOf</text>
+            <!-- <line x1="50" y1="100" x2="250" y2="100" stroke="#000" stroke-width="5"/> -->
+          </svg>
+
+      
+      `)
+
+
+      allInstancesIcons.push(html`
+
+      <svg @click=${() => {window.open('https://id.loc.gov/resources/instances/' + instance.id, "_blank",)}}  id="instance-${counter}-svg" data-resource="instnace-${instance.id}-icon" class="hidden-by-default instance-svg" version="1.1" viewbox="0 0 105 105" xmlns="http://www.w3.org/2000/svg">
+          <path d="m74.453 8.6523-0.28906-0.5h-48.324l-24.16 41.848 24.16 41.848h48.324l24.156-41.848z"/>
+          <text x="0%" y="98%">instances/${instance.id}</text>
+        </svg>    
+
+        
+      `)
+
+
+
+
+      counter++
 
     }
     for (let work of this.resources.works){
@@ -620,14 +942,71 @@ _processTxt(txt: string[]): ResourcesLine[]{
         iHtml.push(line.html)
       }
       allWorks.push(html`<div class="work">
-          <svg id="work-0-svg" class="work-svg" version="1.1" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <svg @click=${() => {window.open('https://id.loc.gov/resources/works/' + work.id, "_blank",)}} id="work-0-svg" data-resource="work-${work.id}-icon" class="work-svg" version="1.1" viewBox="0 0 105 105" xmlns="http://www.w3.org/2000/svg">
             <path d="m74.453 8.6523-0.28906-0.5h-48.324l-24.16 41.848 24.16 41.848h48.324l24.156-41.848z"/>
+            <text x="10%" y="98%">works/${work.id}</text>
+          </svg>
+        ${iHtml}
+      </div>`)
+    }
+
+    let hubArrorw = html``
+
+    if (this.resources.hubs.length>0){
+      hubArrorw = html`
+          <svg class="hub-arrow-svg" width="100%" height="100px" version="1.1" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <marker
+                id="arrow-hub"
+                fill="#565656"
+                viewBox="0 0 15 15"
+                refX="5"
+                refY="5"
+                markerWidth="3"
+                markerHeight="3"
+                orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" />
+              </marker>  
+        
+          <line x1="50%" x2="50%" y1="20" y2="90" stroke="#565656" stroke-width="8" marker-end="url(#arrow-hub)" />
+          <text x="60%" y="60%">bf:expressionOf</text>
+          </svg>
+
+    `
+
+
+    }
+
+    for (let hub of this.resources.hubs){
+
+      let iHtml = []
+      for (let line of hub.parts){
+        iHtml.push(line.html)
+      }
+      allHubs.push(html`<div class="hub">
+          <svg @click=${() => {window.open('https://id.loc.gov/resources/hubs/' + hub.id, "_blank",)}} data-resource="hub-${hub.id}-icon" class="hub-svg" version="1.1" viewBox="0 0 105 105" xmlns="http://www.w3.org/2000/svg">
+           
+        
+          
+            <path d="m74.453 8.6523-0.28906-0.5h-48.324l-24.16 41.848 24.16 41.848h48.324l24.156-41.848z"/>
+            <text x="10%" y="98%">hubs/${hub.id.split("-")[0]+'...'}</text>
           </svg>
         ${iHtml}
       </div>`)
 
 
+      
     }
+
+
+
+
+    // allHubs.push(html`<div class="work">
+    // <svg @click=${() => {window.open('https://id.loc.gov/resources/hubs/' + work.id, "_blank",)}} id="work-0-svg" data-resource="work-${work.id}-icon" class="work-svg" version="1.1" viewBox="0 0 105 105" xmlns="http://www.w3.org/2000/svg">
+    //   <path d="m74.453 8.6523-0.28906-0.5h-48.324l-24.16 41.848 24.16 41.848h48.324l24.156-41.848z"/>
+    //   <text x="10%" y="98%">works/${work.id}</text>
+    // </svg>
+    // ${iHtml}
+    // </div>`)
     
 
     let layout = html`
@@ -635,31 +1014,20 @@ _processTxt(txt: string[]): ResourcesLine[]{
       <div id="bf-diagram-container">
         <div>
           ${allWorks}
-      
+          ${hubArrorw}
+          ${allHubs}
         </div>
         <div class="instance-icons">
-          <span class="tool" data-tip="By adding this class you can provide almost any element with a tool tip." tabindex="1">tool</span> 
-      
-          <svg id="instance-0-svg" class="hidden-by-default instance-svg" version="1.1" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path d="m74.453 8.6523-0.28906-0.5h-48.324l-24.16 41.848 24.16 41.848h48.324l24.156-41.848z"/>
-          </svg>
-          <svg id="instance-1-svg" class="hidden-by-default instance-svg" version="1.1" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path d="m74.453 8.6523-0.28906-0.5h-48.324l-24.16 41.848 24.16 41.848h48.324l24.156-41.848z"/>
-          </svg>
-          <svg id="instance-2-svg" class="hidden-by-default instance-svg" version="1.1" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path d="m74.453 8.6523-0.28906-0.5h-48.324l-24.16 41.848 24.16 41.848h48.324l24.156-41.848z"/>
-          </svg>
-          <svg id="instance-3-svg" class="hidden-by-default instance-svg" version="1.1" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path d="m74.453 8.6523-0.28906-0.5h-48.324l-24.16 41.848 24.16 41.848h48.324l24.156-41.848z"/>
-          </svg>      
-
+        
+          ${allInstancesIcons}
+          
         </div>
         <div class="col-instnace">
           ${allInstances}   
         </div>
 
-
-
+        ${allInstancesLines}
+        
       </div>
     
     `
@@ -687,12 +1055,16 @@ _processTxt(txt: string[]): ResourcesLine[]{
         
       
     }
+
+    
     .hidden-by-default{
       display:none;
     }
     .space-mono-regular {
       font-family: "Space Mono", monospace;
       font-weight: 400;
+      color: #565656;
+
       font-style: normal;
     }
     
@@ -704,18 +1076,70 @@ _processTxt(txt: string[]): ResourcesLine[]{
 
     }
     .instance-svg{
-      width:25%;
-      position:relative;
+      cursor:pointer;
+      width:112px;
+      position:absolute;
+      right:0;
       margin-left:auto;
+      fill:#565656;
       
     }
+    .instance-svg:hover{
+      fill:black;
+    }
+    .instance-svg text{
+      font-size:0.6em;
+      font-family: "Space Mono", monospace;
+
+    }
+
     .work-svg{
-      width:25%;
+      width:112px;
       display:block;
       margin-left:auto;
       margin-right:auto;
+      cursor:pointer;
+      fill:#565656;
 
     }
+
+    .work-svg path:hover{
+      fill:black;
+    }
+    .work-svg text{
+      font-size:0.6em;
+      font-family: "Space Mono", monospace;
+      fill:#565656;
+
+    }
+    .hub-svg{
+      width:112px;
+      display:block;
+      margin-left:auto;
+      margin-right:auto;
+      cursor:pointer;
+      fill:#565656;
+
+    }
+
+    .hub-svg path:hover{
+      fill:black;
+    }
+    .hub-svg text{
+      font-size:0.6em;
+      font-family: "Space Mono", monospace;
+      fill:#565656;
+
+    }
+
+    .hub-arrow-svg text{
+      font-size:1em;
+      font-family: "Space Mono", monospace;
+      fill:#565656;
+
+    }
+
+
     .instance-icons{
       position:relative;
 
@@ -742,15 +1166,18 @@ _processTxt(txt: string[]): ResourcesLine[]{
     }
     .statement a{
       color:black !important;
+      color: #565656  !important;
       text-decoration: none;
 
     }
     .statement a:hover{
       color:black !important;
+      color: #565656  !important;
       text-decoration: underline !important;
     }
     .statement a::visited{
       color:black !important;
+      color: #565656  !important;
       text-decoration: none;
     }
 
@@ -779,6 +1206,24 @@ _processTxt(txt: string[]): ResourcesLine[]{
     .object-value{}
 
 
+    .instance-line-svg{
+      position: absolute;
+      left:0;
+      top:0;
+      height:100px;
+      width:100px;
+      fill: transparent;
+      z-index:-100;
+
+    }
+
+    .bf-instance-of{
+      display:none;
+      font-family: "Space Mono", monospace;
+      fill: #565656;
+    }
+
+
     /*== start of code for tooltips ==*/
     .tool {
         cursor: help;
@@ -803,16 +1248,20 @@ _processTxt(txt: string[]): ResourcesLine[]{
         transform: scale(1) translateY(0);
         z-index: 100; 
     }
+
+
     
     
     /*== pointer tip ==*/
     .tool::before {
         border-style: solid;
+        
         border-width: 1em 0.75em 0 0.75em;
-        border-color: #3E474F transparent transparent transparent;
+        // border-color: #efefef transparent transparent transparent;
+        border-color: #efefef transparent transparent transparent;
         bottom: 100%;
         content: "";
-        margin-left: 0.5em;
+        margin-left: 1.9em;
         transition: all .2s cubic-bezier(.84,-0.18,.31,1.26), opacity .65s .5s;
         transform:  scale(.6) translateY(-90%);
     } 
@@ -825,18 +1274,22 @@ _processTxt(txt: string[]): ResourcesLine[]{
     
     /*== speech bubble ==*/
     .tool::after {
-        background: #3E474F;
+        background: #efefef;
         border-radius: .25em;
+        border: solid 1px #ddd;
         bottom: 180%;
-        color: #EDEFF0;
+        color: #333;
         content: attr(data-tip);
-        margin-left: -8.75em;
+        margin-left: 1.75em;
         padding: 1em;
         transition: all .2s cubic-bezier(.84,-0.18,.31,1.26) .2s;
         transform:  scale(.6) translateY(50%);  
         width: 17.5em;
     }
-    
+    .instance .tool::after {
+      margin-left: -15.75em;
+    }    
+
     .tool:hover::after,
     .tool:focus::after  {
         transition: all .2s cubic-bezier(.84,-0.18,.31,1.26);
