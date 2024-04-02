@@ -388,6 +388,8 @@ _returnDereferenceInfo(id: string | undefined, key:string) {
 
 _dereference(id: string, type: string){
   
+  id = id.replace("http://","https://")
+
   if (this.finalDereferenceTimeout !== null){
     window.clearTimeout(this.finalDereferenceTimeout)
   }
@@ -466,6 +468,7 @@ _dereference(id: string, type: string){
 
 
   }else if (type === 'vocabulary' || type === 'authorities' || type === 'agents'){
+
 
     
     fetch(id + '.skos.rdf', {
